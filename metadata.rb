@@ -3,7 +3,7 @@ maintainer       "Jim Dowling"
 maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures/Runs kkafka. Karamelized version of https://github.com/mthssdrbrg/kafka-cookbook'
-version          "0.10.0"
+version          "1.0.0"
 
 recipe            "kkafka::install", "Installs kafka binaries"
 recipe            "kkafka::default", "Configures Kafka"
@@ -364,4 +364,16 @@ attribute "install/dir",
 
 attribute "install/user",
           :description => "User to install the services as",
+          :type => "string"
+
+attribute "kkafka/jmx_port",
+          :description => "JMX port on which Kafka JVM binds to",
+          :type => "string"
+
+attribute "kkafka/jmx_user",
+          :description => "JMX user for Kafka JVM",
+          :type => "string"
+
+attribute "kkafka/jmx_password",
+          :description => "JMX password for Kafka JVM",
           :type => "string"
