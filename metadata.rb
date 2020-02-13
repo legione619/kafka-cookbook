@@ -3,7 +3,7 @@ maintainer       "Jim Dowling"
 maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures/Runs kkafka. Karamelized version of https://github.com/mthssdrbrg/kafka-cookbook'
-version          "1.0.0"
+version          "1.2.0"
 
 recipe            "kkafka::install", "Installs kafka binaries"
 recipe            "kkafka::default", "Configures Kafka"
@@ -17,6 +17,7 @@ depends "kzookeeper"
 depends "ndb"
 depends "java"
 depends "conda"
+depends "hopsworks"
 
 %w{ ubuntu debian rhel centos }.each do |os|
   supports os
