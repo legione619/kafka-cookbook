@@ -8,11 +8,11 @@ include_attribute "kagent"
 
 #
 # Version of Kafka to install.
-default['kkafka']['version'] = '1.1.0'
+default['kkafka']['version'] = '2.3.0'
 # Version used for properties file
 default['kkafka']['version_properties'] = '1.0'
 # HopsKafkaAuthorizer version
-default['kkafka']['authorizer_version'] = '0.2.0'
+default['kkafka']['authorizer_version'] = '1.3.0'
 
 #
 # Scala version of Kafka.
@@ -25,12 +25,12 @@ default['kkafka']['scala_version'] = '2.11'
 #'http://snurran.sics.se/hops'
 default['kkafka']['base_url'] = node['download_url']
 default['kkafka']['download_url'] = kafka_download_uri(kafka_tar_gz)
-default['kkafka']['authorizer_download_url'] = kafka_download_uri("hops-kafka-authorizer-#{node['kkafka']['authorizer_version']}.jar")
+default['kkafka']['authorizer_download_url'] =  "#{node['download_url']}/hops-kafka-authorizer/#{node['kkafka']['authorizer_version']}/hops-kafka-authorizer-#{node['kkafka']['authorizer_version']}.jar"
 
 #
 # SHA-256 checksum of the archive to download, used by Chef's `remote_file`
 # resource.
-default['kkafka']['checksum'] = '124861011a849b1cf63d2fccee5e79303cea32987f37890d1848948edfcc18ca'
+default['kkafka']['checksum'] = '80bae8179ffa3e1fb32a98d669b552d52d1d69f7d3437c7ffead7c6d6413b74c'
 
 
 #
@@ -48,7 +48,7 @@ default['kkafka']['install_dir'] = "#{node['kkafka']['dir']}/kafka"
 #
 # Directory where to install *this* version of Kafka.
 # For actual default value see `_defaults` recipe.
-default['kkafka']['version_install_dir'] = nil
+default['kkafka']['version_install_dir'] = %(#{node['kkafka']['install_dir']}-#{node['kkafka']['version']})
 
 #
 # Directory where the downloaded archive will be extracted to.
@@ -56,24 +56,38 @@ default['kkafka']['build_dir'] = ::File.join(Dir.tmpdir, 'kafka-build')
 
 #
 # Directory where to store logs from Kafka.
-default['kkafka']['log_dir'] = "#{node['kkafka']['install_dir']}/" + "logs"
+default['kkafka']['log_dir'] = "#{node['kkafka']['install_dir']}/logs"
+
+#
+# Directory where to store kafka libs 
+default['kkafka']['libs_dir'] = "#{node['kkafka']['install_dir']}/libs" 
 
 #
 # Directory where to keep Kafka configuration files. For the
 # actual default value see `_defaults` recipe.
-default['kkafka']['config_dir'] = nil
+default['kkafka']['config_dir'] = "#{node['kkafka']['install_dir']}/config"
+
+# JXM prometheus monitoring 
+default['kkafka']['jmx']['prometheus_exporter']['version']    = "0.12.0"
+default['kkafka']['jmx']['prometheus_exporter']['url']        = "#{node['download_url']}/prometheus/jmx_prometheus_javaagent-#{node['kkafka']['jmx']['prometheus_exporter']['version']}.jar"
+default['kkafka']['metrics_port']                             = "19901"
 
 #
 # JMX port for Kafka.
-default['kkafka']['jmx_port'] = 19999
+default['kkafka']['jmx_port']                 = 19999
+default['kkafka']['jmx_user']                 = "kafkaAdmin"
+default['kkafka']['jmx_password']             = "kafkaAdmin"
 
 #
 # JMX configuration options for Kafka.
-default['kkafka']['jmx_opts'] = %w[
-  -Dcom.sun.management.jmxremote
-  -Dcom.sun.management.jmxremote.authenticate=false
-  -Dcom.sun.management.jmxremote.ssl=false
-  -Djava.net.preferIPv4Stack=true
+default['kkafka']['jmx_opts'] = [
+  "-javaagent:#{node['kkafka']['libs_dir']}/jmx_prometheus_javaagent-#{node['kkafka']['jmx']['prometheus_exporter']['version']}.jar=#{node['kkafka']['metrics_port']}:#{node['kkafka']['config_dir']}/kafka.yaml",
+  "-Dcom.sun.management.jmxremote",
+  "-Dcom.sun.management.jmxremote.authenticate=true",
+  "-Dcom.sun.management.jmxremote.password.file=#{node['kkafka']['config_dir']}/jmxremote.password",
+  "-Dcom.sun.management.jmxremote.access.file=#{node['kkafka']['config_dir']}/jmxremote.access",
+  "-Dcom.sun.management.jmxremote.ssl=false",
+  "-Djava.net.preferIPv4Stack=true"
 ].join(' ')
 
 #
@@ -207,6 +221,16 @@ default['kkafka']['log4j']['appenders'] = {
       conversion_pattern: '[%d] %p %m (%c)%n',
     },
   },
+  'authorizerAppender' => {
+    type: 'org.apache.log4j.RollingFileAppender',
+    file: lazy { %(#{node['kkafka']['log_dir']}/kafka-authorizer.log) },
+    Max_File_Size: '128MB',
+     Max_Backup_Index: '2',
+    layout: {
+      type: 'org.apache.log4j.PatternLayout',
+      conversion_pattern: '[%d] %p %m (%c)%n',
+    },
+  },
 }
 
 #
@@ -235,10 +259,15 @@ default['kkafka']['log4j']['loggers'] = {
     appender: 'stateChangeAppender',
     additivity: false,
   },
+  'kafka.authorizer.logger' => {
+    level: 'WARN',
+    appender: 'authorizerAppender',
+    additivity: false,
+  },
 }
 
 default['kkafka']['broker']['host']['name']                                           = ""
-default['kkafka']['broker']['broker']['id']                                           = 1
+default['kkafka']['broker']['broker']['id']                                           = -1
 default['kkafka']['broker']['advertised']['listeners']                                = ""
 default['kkafka']['broker']['port']                                                   = 9091
 default['kkafka']['broker']['inter']['broker']['listener']['name']                    = "INTERNAL"
@@ -288,48 +317,51 @@ default['kkafka']['broker']['log']['cleaner']['io']['buffer']['load']['factor'] 
 
 
 # values are: PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL
-#default['kkafka']['broker']['security']['inter']['broker']['protocol']           = "SSL"
-default['kkafka']['broker']['inter']['broker']['protocol']['version']            = node['kkafka']['version_properties']
-default['kkafka']['broker']['broker']['rack']                                    = node['kkafka']['broker']['rack']['id']
-default['kkafka']['broker']['listener']['security']['protocol']['map']           = "INTERNAL:SSL,EXTERNAL:SSL"
+#default['kkafka']['broker']['security']['inter']['broker']['protocol']               = "SSL"
+default['kkafka']['broker']['inter']['broker']['protocol']['version']                 = node['kkafka']['version_properties']
+default['kkafka']['broker']['broker']['rack']                                         = node['kkafka']['broker']['rack']['id']
+default['kkafka']['broker']['listener']['security']['protocol']['map']                = "INTERNAL:SSL,EXTERNAL:SSL"
 
 # required, requested, none
-default['kkafka']['broker']['ssl']['client']['auth']                            = "required"
-default['kkafka']['broker']['ssl']['keystore']['location']                      = "#{node['kagent']['keystore_dir']}/#{node['fqdn']}__kstore.jks"
-default['kkafka']['broker']['ssl']['keystore']['password']                      = node['hopsworks']['master']['password']
-default['kkafka']['broker']['ssl']['key']['password']			        = node['hopsworks']['master']['password']
-default['kkafka']['broker']['ssl']['truststore']['location']                    = "#{node['kagent']['keystore_dir']}/#{node['fqdn']}__tstore.jks"
-default['kkafka']['broker']['ssl']['truststore']['password']                    = node['hopsworks']['master']['password']
+default['kkafka']['broker']['ssl']['client']['auth']                                  = "required"
+default['kkafka']['broker']['ssl']['keystore']['location']                            = node['install']['localhost'].casecmp?("true") ? "#{node['kagent']['keystore_dir']}/localhost__kstore.jks" : "#{node['kagent']['keystore_dir']}/#{node['fqdn']}__kstore.jks"
+default['kkafka']['broker']['ssl']['keystore']['password']                            = node['hopsworks']['master']['password']
+default['kkafka']['broker']['ssl']['key']['password']                                 = node['hopsworks']['master']['password']
+default['kkafka']['broker']['ssl']['truststore']['location']                          = node['install']['localhost'].casecmp?("true") ?  "#{node['kagent']['keystore_dir']}/localhost__tstore.jks" : "#{node['kagent']['keystore_dir']}/#{node['fqdn']}__tstore.jks"
+default['kkafka']['broker']['ssl']['truststore']['password']                          = node['hopsworks']['master']['password']
 
-# TODO - HopsWorks implementations needed
-default['kkafka']['broker']['authorizer']['class']['name']                      = "io.hops.kafka.HopsAclAuthorizer"
-default['kkafka']['broker']['ssl']['endpoint']['identification']['algorithm']    = ""
-default['kkafka']['broker']['principal']['builder']['class']                    = "io.hops.kafka.HopsPrincipalBuilder"
-default['kkafka']['broker']['allow']['everyone']['if']['no']['acl']['found']       = "false"
-default['kkafka']['broker']['delete']['topic']['enable']                        = "true"
+default['kkafka']['broker']['authorizer']['class']['name']                            = "io.hops.kafka.HopsAclAuthorizer"
+default['kkafka']['broker']['ssl']['endpoint']['identification']['algorithm']         = ""
+default['kkafka']['broker']['principal']['builder']['class']                          = "io.hops.kafka.HopsPrincipalBuilder"
+default['kkafka']['broker']['allow']['everyone']['if']['no']['acl']['found']          = "false"
+default['kkafka']['broker']['delete']['topic']['enable']                              = "true"
 
-default['kkafka']['broker']['zookeeper']['connection']['timeout']['ms']         = 30000
-default['kkafka']['broker']['zookeeper']['sync']['time']['ms']                  = 2000
-default['kkafka']['broker']['zookeeper']['session']['timeout']['ms']            = 30000
-default['kkafka']['broker']['zookeeper']['set']['acl']                          = "false"
+default['kkafka']['broker']['zookeeper']['connection']['timeout']['ms']               = 30000
+default['kkafka']['broker']['zookeeper']['sync']['time']['ms']                        = 2000
+default['kkafka']['broker']['zookeeper']['session']['timeout']['ms']                  = 30000
+default['kkafka']['broker']['zookeeper']['set']['acl']                                = "false"
 
 #HopsAclAuthorizer database pool properties
-default['kkafka']['broker']['database']['pool']['prepstmt']['cache']['enabled']   = "true"
-default['kkafka']['broker']['database']['pool']['prepstmt']['cache']['size']      = "150"
-default['kkafka']['broker']['database']['pool']['prepstmt']['cache']['sql']['limit'] = "2048"
-default['kkafka']['broker']['database']['pool']['size']                         = "10"
-default['kkafka']['broker']['acl']['polling']['frequency']['ms']                = "1000"
+default['kkafka']['broker']['database']['pool']['prepstmt']['cache']['enabled']       = "true"
+default['kkafka']['broker']['database']['pool']['prepstmt']['cache']['size']          = "150"
+default['kkafka']['broker']['database']['pool']['prepstmt']['cache']['sql']['limit']  = "2048"
+default['kkafka']['broker']['database']['pool']['size']                               = "10"
+default['kkafka']['broker']['acl']['polling']['frequency']['ms']                      = "1000"
+
+# Usernames and passwords of non-superusers in MySQL
+default['kkafka']['mysql']['user']                                                    = "kafka"
+default['kkafka']['mysql']['password']                                                = "kafka"
 
 if node['vagrant'] == "false"
-  default['kkafka']['broker']['super']['users']                                = "User:#{node['fqdn']};User:#{node['kkafka']['user']}"
+  default['kkafka']['broker']['super']['users']                                       = "User:#{node['fqdn']};User:#{node['kkafka']['user']}"
 else
-  default['kkafka']['broker']['super']['users']                                = "User:hopsworks0;User:#{node['kkafka']['user']}"
+  default['kkafka']['broker']['super']['users']                                       = "User:hopsworks0;User:#{node['kkafka']['user']}"
 end
 
 
-default['kkafka']['offset_monitor']['version']                            = "0.2.1"
-default['kkafka']['offset_monitor']['url']                                = "http://snurran.sics.se/hops/KafkaOffsetMonitor-assembly-" + node['kkafka']['offset_monitor']['version'] + ".jar"
-default['kkafka']['offset_monitor']['port']                               = "11111"
+default['kkafka']['offset_monitor']['version']                                        = "0.2.1"
+default['kkafka']['offset_monitor']['url']                                            = "#{node['download_url']}/KafkaOffsetMonitor-assembly-" + node['kkafka']['offset_monitor']['version'] + ".jar"
+default['kkafka']['offset_monitor']['port']                                           = "11111"
 
 
-default['kkafka']['systemd']                                           = "true"
+default['kkafka']['systemd']                                                          = "true"

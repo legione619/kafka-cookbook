@@ -3,7 +3,7 @@ maintainer       "Jim Dowling"
 maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures/Runs kkafka. Karamelized version of https://github.com/mthssdrbrg/kafka-cookbook'
-version          "0.10.0"
+version          "1.3.0"
 
 recipe            "kkafka::install", "Installs kafka binaries"
 recipe            "kkafka::default", "Configures Kafka"
@@ -12,11 +12,14 @@ recipe            "kkafka::monitor", "Helper webapp to monitor performance of ka
 recipe            "kkafka::client", "Kafka client installation"
 recipe            "kkafka::purge", "Removes and deletes Kafka"
 
-depends "kagent"
-depends "kzookeeper"
-depends "ndb"
-depends "java"
-depends "conda"
+depends "java", '~> 7.0.0'
+depends 'scala', '~> 2.1.0'
+depends 'kagent'
+depends 'ndb'
+depends 'conda'
+depends 'kzookeeper'
+
+
 
 %w{ ubuntu debian rhel centos }.each do |os|
   supports os
@@ -346,6 +349,14 @@ attribute "kkafka/broker/acl/polling/frequency/ms",
           :description => "Polling frequency of HopsKafkaAuthorizer to retrieve ACLs",
           :type => 'string'
 
+attribute "kkafka/mysql/user",
+          :description => "DB user for the Kafka service",
+          :type => 'string'
+
+attribute "kkafka/mysql/password",
+          :description => "Password of the DB user for the Kafka service",
+          :type => 'string'
+
 attribute "kkafka/default/private_ips",
           :description => "Set ip addresses",
           :type => "array"
@@ -364,4 +375,16 @@ attribute "install/dir",
 
 attribute "install/user",
           :description => "User to install the services as",
+          :type => "string"
+
+attribute "kkafka/jmx_port",
+          :description => "JMX port on which Kafka JVM binds to",
+          :type => "string"
+
+attribute "kkafka/jmx_user",
+          :description => "JMX user for Kafka JVM",
+          :type => "string"
+
+attribute "kkafka/jmx_password",
+          :description => "JMX password for Kafka JVM",
           :type => "string"
