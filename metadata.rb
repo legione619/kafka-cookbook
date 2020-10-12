@@ -3,7 +3,7 @@ maintainer       "Jim Dowling"
 maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures/Runs kkafka. Karamelized version of https://github.com/mthssdrbrg/kafka-cookbook'
-version          "1.3.0"
+version          "1.4.0"
 
 recipe            "kkafka::install", "Installs kafka binaries"
 recipe            "kkafka::default", "Configures Kafka"
@@ -18,8 +18,7 @@ depends 'kagent'
 depends 'ndb'
 depends 'conda'
 depends 'kzookeeper'
-
-
+depends 'hops'
 
 %w{ ubuntu debian rhel centos }.each do |os|
   supports os
@@ -35,6 +34,10 @@ attribute "kkafka/dir",
 
 attribute "kkafka/user",
           :description => "user to run kafka as",
+          :type => 'string'
+
+attribute "kkafka/user-home",
+          :description => "Home directory of kafka user",
           :type => 'string'
 
 attribute "kkafka/group",

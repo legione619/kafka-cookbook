@@ -3,6 +3,39 @@
 # Recipe:: _configure
 #
 
+# User certs must belong to kafka group to be able to rotate x509 material
+group node['kkafka']['group'] do
+  action :modify
+  members node['kagent']['certs_user']
+  append true
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
+hopsworks_alt_url = "https://#{private_recipe_ip("hopsworks","default")}:8181"
+if node.attribute? "hopsworks"
+  if node["hopsworks"].attribute? "https" and node["hopsworks"]['https'].attribute? ('port')
+    hopsworks_alt_url = "https://#{private_recipe_ip("hopsworks","default")}:#{node['hopsworks']['https']['port']}"
+  end
+end
+
+crypto_dir = x509_helper.get_crypto_dir(node['kkafka']['user'])
+kagent_hopsify "Generate x.509" do
+  user node['kkafka']['user']
+  crypto_directory crypto_dir
+  hopsworks_alt_url hopsworks_alt_url
+  action :generate_x509
+  not_if { node["kagent"]["enabled"] == "false" }
+end
+
+kstore_name, tstore_name = x509_helper.get_user_keystores_name(node['kkafka']['user'])
+node.override['kkafka']['broker']['ssl']['keystore']['location'] = "#{crypto_dir}/#{kstore_name}"
+node.override['kkafka']['broker']['ssl']['keystore']['password'] = node['hopsworks']['master']['password']
+node.override['kkafka']['broker']['ssl']['key']['password'] = node['hopsworks']['master']['password']
+node.override['kkafka']['broker']['ssl']['truststore']['location'] = "#{crypto_dir}/#{tstore_name}"
+node.override['kkafka']['broker']['ssl']['truststore']['password'] = node['hopsworks']['master']['password']
+# required, requested, none
+node.override['kkafka']['broker']['ssl']['client']['auth'] = "required"
+
 directory node['kkafka']['config_dir'] do
   owner node['kkafka']['user']
   group node['kkafka']['group']
@@ -55,18 +88,18 @@ template kafka_init_opts['env_path'] do
   end
 end
 
-file "#{node['kkafka']['config_dir']}/jmxremote.password" do 
+file "#{node['kkafka']['config_dir']}/jmxremote.password" do
   owner node['kkafka']['user']
   group node['kkafka']['group']
   mode '600'
-  content "#{node['kkafka']['jmx_user']} #{node['kkafka']['jmx_password']}"  
+  content "#{node['kkafka']['jmx_user']} #{node['kkafka']['jmx_password']}"
 end
 
-file "#{node['kkafka']['config_dir']}/jmxremote.access" do 
+file "#{node['kkafka']['config_dir']}/jmxremote.access" do
   owner node['kkafka']['user']
   group node['kkafka']['group']
   mode '600'
-  content "#{node['kkafka']['jmx_user']} readwrite" 
+  content "#{node['kkafka']['jmx_user']} readwrite"
 end
 
 cookbook_file "#{node['kkafka']['config_dir']}/kafka.yaml" do
@@ -91,7 +124,7 @@ template kafka_init_opts['script_path'] do
   group 'root'
   mode kafka_init_opts['permissions']
   variables({
-    deps: deps,              
+    deps: deps,
     daemon_name: 'kafka',
     port: node['kkafka']['broker']['port'],
     user: node['kkafka']['user'],

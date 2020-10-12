@@ -7,7 +7,7 @@ end
 user node['kkafka']['user'] do
   action :create
   gid node['kkafka']['group']
-  home "/home/#{node['kkafka']['user']}"
+  home node['kkafka']['user-home']
   shell "/bin/bash"
   manage_home true
   system true
@@ -15,17 +15,12 @@ user node['kkafka']['user'] do
   not_if { node['install']['external_users'].casecmp("true") == 0 }
 end
 
-group node['kagent']['certs_group'] do
-  action :create
-  not_if "getent group #{node['kagent']['certs_group']}"
-  not_if { node['install']['external_users'].casecmp("true") == 0 }
-end
-
-group node['kagent']['certs_group'] do
-  action :modify
-  members ["#{node['kkafka']['user']}"]
+group node["kagent"]["certs_group"] do
+  action :manage
   append true
+  excluded_members node['kkafka']['user']
   not_if { node['install']['external_users'].casecmp("true") == 0 }
+  only_if { conda_helpers.is_upgrade }
 end
 
 [
