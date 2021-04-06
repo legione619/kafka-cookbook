@@ -11,4 +11,3 @@ cookbook 'conda', github: "giabbo79/conda-chef", branch: "1.0"
 cookbook 'kzookeeper', github: "giabbo79/kzookeeper", branch: "1.0"
 
 
-cookbook 'ark', '= 5.0.0'
