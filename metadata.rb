@@ -3,7 +3,7 @@ maintainer       "Jim Dowling"
 maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures/Runs kkafka. Karamelized version of https://github.com/mthssdrbrg/kafka-cookbook'
-version          "2.2.0"
+version          "2.3.0"
 
 recipe            "kkafka::install", "Installs kafka binaries"
 recipe            "kkafka::default", "Configures Kafka"
@@ -13,7 +13,6 @@ recipe            "kkafka::client", "Kafka client installation"
 recipe            "kkafka::purge", "Removes and deletes Kafka"
 
 depends "java", '~> 7.0.0'
-depends 'scala', '~> 2.1.0'
 depends 'kagent'
 depends 'ndb'
 depends 'conda'
@@ -358,10 +357,6 @@ attribute "kkafka/mysql/user",
 
 attribute "kkafka/mysql/password",
           :description => "Password of the DB user for the Kafka service",
-          :type => 'string'
-
-attribute 'kkafka/broker/database/url',
-          :description => "Connection url of the DB for the Kafka service, ie host:port/db",
           :type => 'string'
 
 attribute "kkafka/default/private_ips",
