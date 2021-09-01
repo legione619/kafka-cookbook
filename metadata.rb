@@ -359,6 +359,10 @@ attribute "kkafka/mysql/password",
           :description => "Password of the DB user for the Kafka service",
           :type => 'string'
 
+attribute 'kkafka/broker/database/url',
+          :description => "Connection url of the DB for the Kafka service, ie host:port/db",
+          :type => 'string'
+
 attribute "kkafka/default/private_ips",
           :description => "Set ip addresses",
           :type => "array"
