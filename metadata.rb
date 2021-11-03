@@ -3,7 +3,7 @@ maintainer       "Jim Dowling"
 maintainer_email "jdowling@kth.se"
 license          "Apache v2.0"
 description      'Installs/Configures/Runs kkafka. Karamelized version of https://github.com/mthssdrbrg/kafka-cookbook'
-version          "2.3.0"
+version          "2.4.0"
 
 recipe            "kkafka::install", "Installs kafka binaries"
 recipe            "kkafka::default", "Configures Kafka"
@@ -35,12 +35,20 @@ attribute "kkafka/user",
           :description => "user to run kafka as",
           :type => 'string'
 
+attribute "kkafka/user_id",
+          :description => "Kafka user id. Default: 1504",
+          :type => 'string'
+
 attribute "kkafka/user-home",
           :description => "Home directory of kafka user",
           :type => 'string'
 
 attribute "kkafka/group",
           :description => "group to run kafka as",
+          :type => 'string'
+
+attribute "kkafka/group_id",
+          :description => "Kafka group id. Default: 1504",
           :type => 'string'
 
 attribute "kafka/ulimit",
@@ -357,10 +365,6 @@ attribute "kkafka/mysql/user",
 
 attribute "kkafka/mysql/password",
           :description => "Password of the DB user for the Kafka service",
-          :type => 'string'
-
-attribute 'kkafka/broker/database/url',
-          :description => "Connection url of the DB for the Kafka service, ie host:port/db",
           :type => 'string'
 
 attribute "kkafka/default/private_ips",

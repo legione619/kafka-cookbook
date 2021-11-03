@@ -1,4 +1,5 @@
 include_attribute "ndb"
+include_attribute "hops"
 include_attribute "kagent"
 
 #
@@ -12,7 +13,7 @@ default['kkafka']['version'] = '2.3.0'
 # Version used for properties file
 default['kkafka']['version_properties'] = '1.0'
 # HopsKafkaAuthorizer version
-default['kkafka']['authorizer_version'] = '2.3.0'
+default['kkafka']['authorizer_version'] = '2.4.0'
 
 #
 # Scala version of Kafka.
@@ -44,6 +45,11 @@ default['kkafka']['md5_checksum'] = ''
 default['kkafka']['dir'] = node['install']['dir'].empty? ? "/opt" : node['install']['dir']
 
 default['kkafka']['install_dir'] = "#{node['kkafka']['dir']}/kafka"
+
+# Data volume directories
+default['kkafka']['data_volume']['root_dir']     = "#{node['data']['dir']}/kafka"
+default['kkafka']['data_volume']['app_log_dir']  = "#{node['kkafka']['data_volume']['root_dir']}/logs"
+default['kkafka']['data_volume']['logs_dir']     = "#{node['kkafka']['data_volume']['root_dir']}/kafka-logs"
 
 #
 # Directory where to install *this* version of Kafka.
@@ -93,11 +99,13 @@ default['kkafka']['jmx_opts'] = [
 #
 # User for directories, configuration files and running Kafka.
 default['kkafka']['user'] = node['install']['user'].empty? ? 'kafka' : node['install']['user']
+default['kkafka']['user_id'] = '1504'
 default['kkafka']['user-home'] = "/home/#{node['kkafka']['user']}"
 
 #
 # Group for directories, configuration files and running Kafka.
 default['kkafka']['group'] = node['install']['user'].empty? ? 'kafka' : node['install']['user']
+default['kkafka']['group_id'] = '1504'
 
 #
 # Should node['kkafka']['user'] and node['kkafka']['group'] be created?
@@ -189,7 +197,7 @@ default['kkafka']['log4j']['appenders'] = {
     Max_Backup_Index: '20',
     layout: {
       type: 'org.apache.log4j.PatternLayout',
-      conversion_pattern: '[%d] %p %m (%c)%n',
+      conversion_pattern: node['hops']['log']['pattern'],
     },
   },
   'stateChangeAppender' => {
@@ -199,7 +207,7 @@ default['kkafka']['log4j']['appenders'] = {
      Max_Backup_Index: '2',
     layout: {
       type: 'org.apache.log4j.PatternLayout',
-      conversion_pattern: '[%d] %p %m (%c)%n',
+      conversion_pattern: node['hops']['log']['pattern'],
     },
   },
   'requestAppender' => {
@@ -209,7 +217,7 @@ default['kkafka']['log4j']['appenders'] = {
      Max_Backup_Index: '2',
     layout: {
       type: 'org.apache.log4j.PatternLayout',
-      conversion_pattern: '[%d] %p %m (%c)%n',
+      conversion_pattern: node['hops']['log']['pattern'],
     },
   },
   'controllerAppender' => {
@@ -219,7 +227,7 @@ default['kkafka']['log4j']['appenders'] = {
      Max_Backup_Index: '2',
     layout: {
       type: 'org.apache.log4j.PatternLayout',
-      conversion_pattern: '[%d] %p %m (%c)%n',
+      conversion_pattern: node['hops']['log']['pattern'],
     },
   },
   'authorizerAppender' => {
@@ -229,7 +237,7 @@ default['kkafka']['log4j']['appenders'] = {
      Max_Backup_Index: '2',
     layout: {
       type: 'org.apache.log4j.PatternLayout',
-      conversion_pattern: '[%d] %p %m (%c)%n',
+      conversion_pattern: node['hops']['log']['pattern'],
     },
   },
 }
