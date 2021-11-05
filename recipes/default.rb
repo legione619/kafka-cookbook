@@ -56,12 +56,11 @@ if node['kkafka']['broker']['broker']['id'] == -1
     if my_ip.eql? broker
       Chef::Log.info "Found matching IP address in the list of kafka nodes: #{broker}. ID= #{id}"
       node.override['kkafka']['broker']['broker']['id'] = id
-#      broker_port_external = broker_port_internal + id
-      broker_port_external = broker_port_internal
+      broker_port_external = broker_port_internal + id
       node.override['kkafka']['broker']['listeners'] = "INTERNAL://#{hostname}:#{broker_port_internal},EXTERNAL://#{hostname}:#{broker_port_external}"
       node.override['kkafka']['broker']['advertised']['listeners'] = "INTERNAL://#{hostname}:#{broker_port_internal},EXTERNAL://#{my_gateway_ip}:#{broker_port_external}"
     end
-    id += 1
+#    id += 1
   end
 end
 
