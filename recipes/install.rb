@@ -1,4 +1,5 @@
 group node['kkafka']['group'] do
+  gid node['kkafka']['group_id']
   action :create
   not_if "getent group #{node['kkafka']['group']}"
   not_if { node['install']['external_users'].casecmp("true") == 0 }
@@ -6,6 +7,7 @@ end
 
 user node['kkafka']['user'] do
   action :create
+  uid node['kkafka']['user_id']
   gid node['kkafka']['group']
   home node['kkafka']['user-home']
   shell "/bin/bash"
@@ -23,6 +25,30 @@ group node["kagent"]["certs_group"] do
   only_if { conda_helpers.is_upgrade }
 end
 
+group node['logger']['group'] do
+  gid node['logger']['group_id']
+  action :create
+  not_if "getent group #{node['logger']['group']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
+user node['logger']['user'] do
+  uid node['logger']['user_id']
+  gid node['logger']['group_id']
+  shell "/bin/nologin"
+  action :create
+  system true
+  not_if "getent passwd #{node['logger']['user']}"
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
+group node['kkafka']['group'] do
+  action :modify
+  append true
+  members [node['logger']['user']]
+  not_if { node['install']['external_users'].casecmp("true") == 0 }
+end
+
 [
   node['kkafka']['version_install_dir'],
   node['kkafka']['build_dir'],
@@ -34,18 +60,6 @@ end
     recursive true
   end
 end
-
-kafka_log_dirs.each do |dir|
-  directory dir do
-    owner node['kkafka']['user']
-    group node['kkafka']['group']
-    mode '770'
-    action :create
-    recursive true
-    not_if { File.directory?(dir) }
-  end
-end
-
 
 kkafka_download kafka_local_download_path do
   source node['kkafka']['download_url']
@@ -78,4 +92,70 @@ remote_file "#{node['kkafka']['libs_dir']}/#{jmx_prometheus_filename}" do
   action :create
 end
 
+directory node['data']['dir'] do
+  owner 'root'
+  group 'root'
+  mode '0775'
+  action :create
+  not_if { ::File.directory?(node['data']['dir']) }
+end
 
+directory node['kkafka']['data_volume']['root_dir'] do
+  owner node['kkafka']['user']
+  group node['kkafka']['group']
+  mode '0770'
+end
+
+directory node['kkafka']['data_volume']['logs_dir'] do
+  owner node['kkafka']['user']
+  group node['kkafka']['group']
+  mode '770'
+  action :create
+  not_if { File.directory?(node['kkafka']['data_volume']['logs_dir']) }
+end
+
+kafka_log_dirs.each do |dir|
+  bash "Move Kafka logs #{dir} to data volume" do
+    user 'root'
+    code <<-EOH
+      set -e
+      mv -f #{dir}/* #{node['kkafka']['data_volume']['logs_dir']}
+      rm -rf #{dir}
+    EOH
+    only_if { conda_helpers.is_upgrade }
+    only_if { File.directory?(dir)}
+    not_if { File.symlink?(dir)}
+  end
+
+  link dir do
+    owner node['kkafka']['user']
+    group node['kkafka']['group']
+    mode '770'
+    to node['kkafka']['data_volume']['logs_dir']
+  end
+end
+
+directory node['kkafka']['data_volume']['app_log_dir'] do
+  owner node['kkafka']['user']
+  group node['kkafka']['group']
+  mode '0750'
+end
+
+bash 'Move Kafka application logs to data volume' do
+  user 'root'
+  code <<-EOH
+    set -e
+    mv -f #{node['kkafka']['log_dir']}/* #{node['kkafka']['data_volume']['app_log_dir']}
+    rm -rf #{node['kkafka']['log_dir']}
+  EOH
+  only_if { conda_helpers.is_upgrade }
+  only_if { File.directory?(node['kkafka']['log_dir'])}
+  not_if { File.symlink?(node['kkafka']['log_dir'])}
+end
+
+link node['kkafka']['log_dir'] do
+  owner node['kkafka']['user']
+  group node['kkafka']['group']
+  mode '0750'
+  to node['kkafka']['data_volume']['app_log_dir']
+end

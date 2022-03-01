@@ -3,8 +3,7 @@ require 'resolv'
 Chef::Recipe.send(:include, Hops::Helpers)
 
 my_ip = my_private_ip()
-#my_gateway_ip = my_gateway_ip()
-my_gateway_ip =  my_private_ip()
+my_gateway_ip = my_gateway_ip()
 
 #
 # Get all the hostsnames for all hosts in the cluster
